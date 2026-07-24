@@ -1151,10 +1151,14 @@
         container.innerHTML = `
           <div class="text-center py-4">
             <p class="text-red-500 text-sm mb-2">ไม่สามารถดึงข้อมูลได้</p>
-            <button onclick="showStatus()" class="text-xs text-blue-600 underline">ลองใหม่อีกครั้ง</button>
+            <button onclick="showStatus()" class="text-xs text-blue-600 underline font-medium">ลองใหม่อีกครั้ง</button>
           </div>
         `;
       }
+    }
+
+    function closeStatus() {
+      document.getElementById('statusModal').classList.remove('active');
     }
 
     // History
