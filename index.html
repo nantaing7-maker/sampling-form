@@ -629,22 +629,6 @@
           </div>
           <p class="text-sm text-blue-600/70 mt-1">แบบฟอร์มตรวจสอบการเข้า-ออกห้องสุ่มตัวอย่าง</p>
         </div>
-        <div class="relative">
-          <button onclick="toggleDropdown()" class="flex items-center gap-1 text-sm text-blue-700 hover:text-blue-900 transition-colors px-2 py-1 rounded hover:bg-blue-50">
-            <span class="material-symbols-rounded text-lg">more_vert</span>
-          </button>
-          <div id="dropdownMenu" class="hidden absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-blue-100 z-10 py-1">
-            <button onclick="showHistory(); toggleDropdown()" class="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-blue-800 hover:bg-blue-50 transition-colors">
-              <span class="material-symbols-rounded text-lg">history</span>
-              <span>ประวัติ</span>
-            </button>
-            <button onclick="exportToExcel(); toggleDropdown()" class="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-blue-800 hover:bg-blue-50 transition-colors">
-              <span class="material-symbols-rounded text-lg">download</span>
-              <span>ส่งออก Excel</span>
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   </header>
 
@@ -1041,7 +1025,7 @@
       }
 
       // Prepare Data for Google Sheets (Matching User's Header Names Exactly)
-      const scriptURL = 'https://script.google.com/macros/s/AKfycbxLJr5P_80KsBtdAUuwszDL8XnvEQL3UAFaFgr-4LkQfn034gsXkr5aOb3Re2W3CCr3/exec';
+      const scriptURL = 'https://script.google.com/macros/s/AKfycbydbg6QbathFVXX5b-Jp7V-ByhqgSnkP-5q2U7F5s8nqzMzDZAs36dcz-ESSr3ETN-N/exec';
       
       const payload = {
         "Material Code": materialDesc,
@@ -1129,39 +1113,54 @@
       }
     }
 
-    // Status Modal
-    function showStatus() {
+    // Status Modal (ดึงจาก Google Sheets โดยตรง)
+    async function showStatus() {
       document.getElementById('statusModal').classList.add('active');
-      renderStatus();
-    }
-
-    function closeStatus() {
-      document.getElementById('statusModal').classList.remove('active');
-    }
-
-    function renderStatus() {
       const container = document.getElementById('statusContent');
-      if (records.length === 0) {
-        container.innerHTML = '<div class="text-center text-gray-400 text-sm py-4">ยังไม่มีข้อมูล</div>';
-        return;
-      }
-
-      const r = records[0].data;
-      const timestamp = new Date(r.timestamp).toLocaleString('th-TH');
-
       container.innerHTML = `
-        <div class="text-xs text-gray-500 text-center mb-3">ข้อมูลล่าสุด: ${timestamp}</div>
-        <div class="space-y-3">
-          <div class="bg-gray-50 rounded-lg p-3">
-            <div class="text-xs text-gray-500 mb-1">Material Code</div>
-            <div class="text-lg font-bold text-gray-900">${r.material_description || '-'}</div>
-          </div>
-          <div class="bg-gray-50 rounded-lg p-3">
-            <div class="text-xs text-gray-500 mb-1">Batch No.</div>
-            <div class="text-lg font-bold text-gray-900">${r.batch_no || '-'}</div>
-          </div>
+        <div class="flex flex-col items-center py-8">
+          <div class="spinner mb-3"></div>
+          <p class="text-gray-500 text-sm">กำลังดึงข้อมูลล่าสุดจาก Google Sheets...</p>
         </div>
       `;
+      
+      try {
+        // ใช้คำสั่ง GET เพื่อดึงข้อมูลล่าสุดจาก Script
+        const response = await fetch(SCRIPT_URL);
+        const result = await response.json();
+        
+        if (result.status === "success") {
+          const r = result.data;
+          const timestamp = new Date(r.timestamp).toLocaleString('th-TH');
+          
+          container.innerHTML = `
+            <div class="text-xs text-gray-500 text-center mb-3">อัปเดตล่าสุดเมื่อ: ${timestamp}</div>
+            <div class="space-y-3">
+              <div class="bg-blue-50 rounded-lg p-4 border border-blue-100 shadow-sm">
+                <div class="text-xs text-blue-600 font-semibold mb-1 uppercase tracking-wider">Material Code</div>
+                <div class="text-xl font-bold text-blue-900 break-words">${r.materialCode || '-'}</div>
+              </div>
+              <div class="bg-blue-50 rounded-lg p-4 border border-blue-100 shadow-sm">
+                <div class="text-xs text-blue-600 font-semibold mb-1 uppercase tracking-wider">Batch No.</div>
+                <div class="text-xl font-bold text-blue-900 break-words">${r.batchNo || '-'}</div>
+              </div>
+              <div class="text-center">
+                <span class="text-[10px] text-gray-400">ข้อมูลนี้แสดงเหมือนกันทุกเครื่อง</span>
+              </div>
+            </div>
+          `;
+        } else {
+          container.innerHTML = '<div class="text-center text-gray-400 text-sm py-4">ยังไม่มีข้อมูลในระบบ</div>';
+        }
+      } catch (error) {
+        console.error('Fetch status error:', error);
+        container.innerHTML = `
+          <div class="text-center py-4">
+            <p class="text-red-500 text-sm mb-2">ไม่สามารถดึงข้อมูลได้</p>
+            <button onclick="showStatus()" class="text-xs text-blue-600 underline">ลองใหม่อีกครั้ง</button>
+          </div>
+        `;
+      }
     }
 
     // History
@@ -1342,19 +1341,6 @@
       errorEl.textContent = message;
       errorEl.classList.remove('hidden');
     }
-
-    function toggleDropdown() {
-      const menu = document.getElementById('dropdownMenu');
-      menu.classList.toggle('hidden');
-    }
-
-    document.addEventListener('click', function(e) {
-      const menu = document.getElementById('dropdownMenu');
-      const dropdown = e.target.closest('.relative');
-      if (!dropdown || !dropdown.contains(menu)) {
-        menu.classList.add('hidden');
-      }
-    });
 
     function showSuccess(message) {
       hideMessages();
