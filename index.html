@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sampling Room Clearance - B.14</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded&family=Sarabun:wght@300;400;500;600;700&display=swap" />
+  <style>
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 30%, #7dd3fc 60%, #e0f2fe 100%);
+      min-height: 100vh;
+    }
+    .direction-btn {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .direction-btn.active-in {
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      border-color: #0284c7;
+      color: #ffffff;
+      box-shadow: 0 2px 12px rgba(14, 165, 233, 0.4);
+    }
+    .direction-btn.active-out {
+      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      border-color: #2563eb;
+      color: #ffffff;
+      box-shadow: 0 2px 12px rgba(59, 130, 246, 0.4);
+    }
+    .direction-btn:not(.active-in):not(.active-out) {
+      background: rgba(255, 255, 255, 0.7);
+      border-color: rgba(203, 213, 225, 0.5);
+      color: #64748b;
+    }
+    .form-container {
+      transition: all 0.3s ease;
+    }
+    .qr-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 50;
+      justify-content: center;
+      align-items: center;
+    }
+    .qr-modal.active {
+      display: flex;
+    }
+    .history-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 50;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 2rem;
+      overflow-y: auto;
+    }
+    .history-modal.active {
+      display: flex;
+    }
+    .required-star {
+      color: #ef4444;
+      margin-left: 2px;
+    }
+    input[type="text"], input[type="number"] {
+      transition: border-color 0.2s ease;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .submit-btn {
+      transition: all 0.2s ease;
+    }
+    .submit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .submit-btn:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-sky-50/90 via-blue-50/90 to-sky-100/90 backdrop-blur-md shadow-md border-b border-sky-200/50">
+    <div class="max-w-3xl mx-auto px-4 py-4">
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs font-semibold text-sky-500 uppercase tracking-wider">Checklist by QAP</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Sampling Room Clearance – B.14</h1>
+            <button onclick="showStatus()" class="flex items-center gap-2 px-5 py-2.5 text-base font-bold bg-gradient-to-r from-sky-400 to-blue-500 text-white rounded-xl shadow-md hover:from-sky-500 hover:to-blue-600 hover:shadow-lg transition-all transform hover:scale-105">
+              <span class="material-symbols-rounded text-xl">visibility</span>
+              <span>Status</span>
+            </button>
+          </div>
+          <p class="text-sm text-gray-500 mt-1">แบบฟอรมตรวจสอบการเขา-ออกหองสุมตวยอยาง</p>
+        </div>
+        <div class="relative">
+          <button onclick="toggleDropdown()" class="flex items-center gap-1 text-sm text-sky-600 hover:text-sky-800 transition-colors px-2 py-1 rounded hover:bg-sky-100/50">
+            <span class="material-symbols-rounded text-lg">more_vert</span>
+          </button>
+          <div id="dropdownMenu" class="hidden absolute right-0 top-full mt-1 w-48 bg-white/95 backdrop-blur-md rounded-lg shadow-lg border border-sky-200/50 z-10 py-1">
+            <button onclick="showHistory(); toggleDropdown()" class="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-sky-100/50 transition-colors">
+              <span class="material-symbols-rounded text-lg">history</span>
+              <span>ประวติ</span>
+            </button>
+            <button onclick="exportToExcel(); toggleDropdown()" class="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-sky-100/50 transition-colors">
+              <span class="material-symbols-rounded text-lg">download</span>
+              <span>สงออก Excel</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Form -->
+  <main class="max-w-3xl mx-auto px-4 py-6">
+    <div class="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden form-container border border-sky-200/50" id="formContainer">
+      <!-- Direction Toggle -->
+      <div class="p-4 border-b border-sky-100">
+        <div class="flex gap-3">
+          <button type="button" id="btnIn" onclick="setDirection('in')" 
+            class="direction-btn active-in flex-1 py-4 px-4 rounded-xl border-2 text-center">
+            <div class="font-semibold text-lg">เขา</div>
+            <div class="text-sm opacity-70">(IN)</div>
+          </button>
+          <button type="button" id="btnOut" onclick="setDirection('out')"
+            class="direction-btn flex-1 py-4 px-4 rounded-xl border-2 text-center">
+            <div class="font-semibold text-lg">ออก</div>
+            <div class="text-sm opacity-70">(OUT)</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Form Fields -->
+      <div class="p-4 space-y-5">
+        <!-- Material Code -->
+        <div>
+          <label class="text-sm font-semibold text-gray-800 mb-2">
+            Material Code <span class="required-star">*</span>
+          </label>
+          <div class="flex gap-2">
+            <input type="text" id="materialDesc" placeholder="Enter your answer"
+              class="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm">
+            <button type="button" onclick="showQRScanner()"
+              class="flex items-center gap-1 px-4 py-3 border-2 border-sky-400 text-sky-600 rounded-lg hover:bg-sky-50 transition-colors text-sm font-medium whitespace-nowrap">
+              <span class="material-symbols-rounded text-lg">qr_code_scanner</span>
+              <span>สแกน QR</span>
+            </button>
+          </div>
+        </div>
+        <!-- Batch No. -->
+        <div>
+          <label class="text-sm font-semibold text-gray-800 mb-2">
+            Batch No.
+          </label>
+          <input type="text" id="batchNo" placeholder="Enter your answer"
+            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm">
+        </div>
+        <!-- Sampling Size -->
+        <div>
+          <label class="text-sm font-semibold text-gray-800 mb-2">
+            <span id="samplingSizeLabel">Sampling Size (สำหรับเขา)</span> <span class="required-star">*</span>
+          </label>
+          <p class="text-xs text-gray-500 mb-2" id="samplingSizeSublabel">จำนวนการตรวจสอบ (กลอง/ชิ้น)</p>
+          <input type="number" id="samplingSize" placeholder="The value must be a number" min="0"
+            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm">
+        </div>
+
+        <!-- Sample Usage (OUT only) -->
+        <div id="sampleUsageField" class="hidden">
+          <label class="text-sm font-semibold text-gray-800 mb-2">
+            Sample Usage (ชิ้น) <span class="required-star">*</span>
+          </label>
+          <p class="text-xs text-gray-500 mb-2">จำนวนการใช้งานตัวอยางทดสอบ</p>
+          <input type="number" id="sampleUsage" placeholder="The value must be a number" min="0"
+            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm">
+        </div>
+
+        <!-- Inspect by -->
+        <div>
+          <label class="text-sm font-semibold text-gray-800 mb-2">
+            Inspect by (ผู้ตรวจสอบ) <span class="required-star">*</span>
+          </label>
+          <input type="text" id="inspectBy" placeholder="Enter your answer"
+            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm">
+        </div>
+
+        <!-- Remarks -->
+        <div>
+          <label class="text-sm font-semibold text-gray-800 mb-2">
+            หมายเหตุ (ถ้ามี)
+          </label>
+          <input type="text" id="remarks" placeholder="Enter your answer"
+            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm">
+        </div>
+      </div>
+
+<!-- Submit Button -->
+      <div class="p-4 border-t border-sky-100">
+        <button type="button" onclick="submitForm()"
+          class="submit-btn w-full bg-gradient-to-r from-sky-400 to-blue-500 text-white font-semibold py-3 px-6 rounded-xl text-base shadow-md hover:from-sky-500 hover:to-blue-600 hover:shadow-lg transition-all">
+          Submit
+        </button>      </div>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error-message" class="text-red-600 text-sm mt-2 hidden bg-red-50 border border-red-200 rounded-lg px-4 py-3" role="alert"></div>
+
+    <!-- Success Message -->
+    <div id="success-message" class="text-green-700 text-sm mt-2 hidden bg-green-50 border border-green-200 rounded-lg px-4 py-3" role="alert"></div>
+  </main>
+
+  <!-- QR Scanner Modal -->
+  <div id="qrModal" class="qr-modal">
+    <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-gray-900">สแกน QR Code</h3>
+        <button onclick="closeQRScanner()" class="text-gray-500 hover:text-gray-700">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <!-- Mode Toggle -->
+      <div class="flex bg-gray-100 rounded-lg p-1 mb-4">
+        <button type="button" onclick="setQRMode('scan')" id="qrModeScan" class="flex-1 py-2 text-sm font-medium rounded-md transition-colors bg-white shadow-sm text-gray-900">
+          สแกน QR
+        </button>
+        <button type="button" onclick="setQRMode('manual')" id="qrModeManual" class="flex-1 py-2 text-sm font-medium rounded-md transition-colors text-gray-500">
+          กรอกเอง
+        </button>
+      </div>
+
+      <!-- Scan Mode -->
+      <div id="qrScanMode">
+        <div id="reader" class="rounded-lg overflow-hidden mb-4" style="width: 100%;"></div>
+        <div id="scanResult" class="hidden bg-green-50 border border-green-200 rounded-lg p-3 mb-2">
+          <div class="text-xs text-green-600 font-medium mb-1">สแกนได้แล้ว:</div>
+          <div id="scannedText" class="text-sm text-green-800 font-mono break-all"></div>
+        </div>
+        <p id="scanHint" class="text-xs text-gray-400 text-center">วาง QR Code ให้อยู่ในกรอบเพื่อสแกน</p>
+      </div>
+
+      <!-- Manual Mode -->
+      <div id="qrManualMode" class="hidden">
+        <p class="text-sm text-gray-600 mb-2">กรอกขอมูล Material Code ด้วยตนเอง</p>
+        <input type="text" id="manualQRInput" placeholder="Enter material code..."
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2">
+        <p class="text-sm text-gray-600 mb-2">Batch No. (ถ้ามี)</p>
+        <input type="text" id="manualBatchInput" placeholder="Enter batch number..."
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+      </div>
+
+      <div class="flex gap-2 mt-4">
+        <button onclick="closeQRScanner()" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+          ยกเลิก
+        </button>
+        <button onclick="confirmQRScan()" class="flex-1 bg-sky-500 text-white py-2 rounded-lg hover:bg-sky-600 transition-colors text-sm font-medium">
+          ยืนยัน
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Modal -->
+  <div id="statusModal" class="history-modal">
+    <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 mb-8">
+      <div class="flex justify-between items-center p-4 border-b border-gray-200">
+        <h3 class="text-lg font-bold text-gray-900">สถานะล่าสุด</h3>
+        <button onclick="closeStatus()" class="text-gray-500 hover:text-gray-700">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+      <div class="p-4" id="statusContent">
+        <div class="text-center text-gray-500 py-8">ยังไม่มีขอมูล</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="historyModal" class="history-modal">
+    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 mb-8">
+      <div class="flex justify-between items-center p-4 border-b border-gray-200">
+        <h3 class="text-lg font-bold text-gray-900">ประวัติการบันทึก</h3>
+        <div class="flex gap-2">
+          <button onclick="deleteAllRecords()" class="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="ลบขอมูลทั้งหมด">
+            <span class="material-symbols-rounded text-sm">delete_sweep</span>
+            ลบทั้งหมด
+          </button>
+          <button onclick="closeHistory()" class="text-gray-500 hover:text-gray-700">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+      </div>
+      <div class="p-4" id="historyContent">
+        <div class="text-center text-gray-500 py-8">กำลังโหลดขอมูล...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let currentDirection = 'in';
+    let records = [];
+
+    // LocalStorage helper (standalone mode)
+    const STORAGE_KEY = 'sampling_clearance_b14_records';
+
+    function saveToStorage(recs) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(recs));
+    }
+
+    function loadFromStorage() {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    // Initialize
+    window.addEventListener('load', async () => {
+      try {
+        await loadRecords();
+      } catch (error) {
+        console.error('Initialization error:', error);
+        showError('เกิดข้อผิดพลาดในการโหลดขอมูล');
+      }
+    });
+
+    // Direction Toggle
+    function setDirection(direction) {
+      currentDirection = direction;
+      const btnIn = document.getElementById('btnIn');
+      const btnOut = document.getElementById('btnOut');
+      const formContainer = document.getElementById('formContainer');
+      const sampleUsageField = document.getElementById('sampleUsageField');
+      const samplingSizeLabel = document.getElementById('samplingSizeLabel');
+      const samplingSizeSublabel = document.getElementById('samplingSizeSublabel');
+
+      if (direction === 'in') {
+        btnIn.className = 'direction-btn active-in flex-1 py-4 px-4 rounded-xl border-2 text-center';
+        btnOut.className = 'direction-btn flex-1 py-4 px-4 rounded-xl border-2 text-center';
+        formContainer.style.borderTop = '4px solid #3b82f6';
+        sampleUsageField.classList.add('hidden');
+        samplingSizeLabel.textContent = 'Sampling Size (ขาเขา)';
+        samplingSizeSublabel.textContent = 'จำนวนการตรวจสอบ (กลอง/ชิ้น)';
+      } else {
+        btnIn.className = 'direction-btn flex-1 py-4 px-4 rounded-xl border-2 text-center';
+        btnOut.className = 'direction-btn active-out flex-1 py-4 px-4 rounded-xl border-2 text-center';
+        formContainer.style.borderTop = '4px solid #f97316';
+        sampleUsageField.classList.remove('hidden');
+        samplingSizeLabel.textContent = 'Sampling Size (ขาออก)';
+        samplingSizeSublabel.textContent = 'จำนวนการตรวจสอบ (กลอง/ชิ้น)';
+      }
+    }
+
+    // QR Scanner
+    let qrMode = 'scan'; // 'scan' or 'manual'
+    let html5QrcodeScanner = null;
+    let lastScannedText = '';
+
+    function showQRScanner() {
+      document.getElementById('qrModal').classList.add('active');
+      setQRMode('scan');
+      document.getElementById('manualQRInput').value = '';
+      document.getElementById('manualBatchInput').value = '';
+      lastScannedText = '';
+      document.getElementById('scanResult').classList.add('hidden');
+      document.getElementById('scanHint').classList.remove('hidden');
+    }
+
+    function closeQRScanner() {
+      document.getElementById('qrModal').classList.remove('active');
+      stopScanner();
+    }
+
+    function setQRMode(mode) {
+      qrMode = mode;
+      const scanBtn = document.getElementById('qrModeScan');
+      const manualBtn = document.getElementById('qrModeManual');
+      const scanMode = document.getElementById('qrScanMode');
+      const manualMode = document.getElementById('qrManualMode');
+
+      if (mode === 'scan') {
+        scanBtn.className = 'flex-1 py-2 text-sm font-medium rounded-md transition-colors bg-white shadow-sm text-gray-900';
+        manualBtn.className = 'flex-1 py-2 text-sm font-medium rounded-md transition-colors text-gray-500';
+        scanMode.classList.remove('hidden');
+        manualMode.classList.add('hidden');
+        startScanner();
+      } else {
+        scanBtn.className = 'flex-1 py-2 text-sm font-medium rounded-md transition-colors text-gray-500';
+        manualBtn.className = 'flex-1 py-2 text-sm font-medium rounded-md transition-colors bg-white shadow-sm text-gray-900';
+        scanMode.classList.add('hidden');
+        manualMode.classList.remove('hidden');
+        stopScanner();
+      }
+    }
+
+    function startScanner() {
+      if (typeof Html5Qrcode === 'undefined') {
+        document.getElementById('scanHint').textContent = 'ไลบรารีสแกน QR โหลดไม่สำเร็จ กรุณารีโหลดหน้า';
+        return;
+      }
+
+      stopScanner();
+
+      try {
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        html5QrcodeScanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          onScanSuccess,
+          onScanFailure
+        ).catch(err => {
+          console.error('Scanner start error:', err);
+          document.getElementById('scanHint').textContent = 'ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง';
+        });
+      } catch (err) {
+        console.error('Scanner init error:', err);
+        document.getElementById('scanHint').textContent = 'เกิดข้อผิดพลาดในการเปิดกล้อง';
+      }
+    }
+
+    function stopScanner() {
+      if (html5QrcodeScanner) {
+        try {
+          html5QrcodeScanner.stop().then(() => {
+            html5QrcodeScanner.clear();
+          }).catch(() => {});
+        } catch (e) {
+          // ignore
+        }
+        html5QrcodeScanner = null;
+      }
+    }
+
+    function onScanSuccess(decodedText) {
+      lastScannedText = decodedText;
+      document.getElementById('scannedText').textContent = decodedText;
+      document.getElementById('scanResult').classList.remove('hidden');
+      document.getElementById('scanHint').classList.add('hidden');
+      stopScanner();
+    }
+
+    function onScanFailure(error) {
+      // ignore
+    }
+
+    function parseAndFillQR(qrInput) {
+      const parts = qrInput.split(':');
+      if (parts.length >= 7) {
+        const material = parts[5] || '';
+        const batch = parts[6] || '';
+        document.getElementById('materialDesc').value = material;
+        document.getElementById('batchNo').value = batch;
+        showSuccess('สแกน QR เรียบร้อยแล้ว');
+      } else {
+        document.getElementById('materialDesc').value = qrInput;
+        showSuccess('กรอกขอมูล QR เรียบร้อยแล้ว');
+      }
+      closeQRScanner();
+    }
+
+    function confirmQRScan() {
+      if (qrMode === 'scan') {
+        if (lastScannedText) {
+          parseAndFillQR(lastScannedText);
+        } else {
+          alert('กรุณาสแกน QR Code ก่อน');
+        }
+      } else {
+        const manualInput = document.getElementById('manualQRInput').value.trim();
+        const manualBatch = document.getElementById('manualBatchInput').value.trim();
+
+        if (!manualInput) {
+          alert('กรุณากรอก Material Code');
+          return;
+        }
+
+        document.getElementById('materialDesc').value = manualInput;
+        if (manualBatch) {
+          document.getElementById('batchNo').value = manualBatch;
+        }
+        showSuccess('กรอกขอมูลเองเรียบรอย');
+        closeQRScanner();
+      }
+    }
+
+    // Form Submission
+    async function submitForm() {
+      hideMessages();
+      
+      const materialDesc = document.getElementById('materialDesc').value.trim();
+      const batchNo = document.getElementById('batchNo').value.trim();
+      const samplingSize = document.getElementById('samplingSize').value;
+      const inspectBy = document.getElementById('inspectBy').value.trim();
+      const remarks = document.getElementById('remarks').value.trim();
+      const sampleUsage = document.getElementById('sampleUsage').value;
+
+      // Validation
+      if (!materialDesc) {
+        showError('กรุณากรอก Material Code');
+        return;
+      }
+      if (!samplingSize || isNaN(samplingSize)) {
+        showError('กรุณากรอก Sampling Size ใหถูกต้อง');
+        return;
+      }
+      if (!inspectBy) {
+        showError('กรุณากรอก Inspect by');
+        return;
+      }
+      if (currentDirection === 'out' && (!sampleUsage || isNaN(sampleUsage))) {
+        showError('กรุณากรอก Sample Usage ใหถูกต้อง');
+        return;
+      }
+
+      const record = {
+        doc_id: 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        created_at: new Date().toISOString(),
+        data: {
+          direction: currentDirection,
+          material_description: materialDesc,
+          batch_no: batchNo,
+          sampling_size: parseInt(samplingSize),
+          inspect_by: inspectBy,
+          remarks: remarks,
+          sample_usage: currentDirection === 'out' ? parseInt(sampleUsage) : null,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      try {
+        records.push(record);
+        saveToStorage(records);
+        showSuccess('บันทึกขอมูลเรียบรอยแล้ว');
+        clearForm();
+      } catch (error) {
+        console.error('Submit error:', error);
+        showError('เกิดข้อผิดพลาดในการบันทึกขอมูล');
+      }
+    }
+
+    // Load Records
+    async function loadRecords() {
+      try {
+        records = loadFromStorage().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      } catch (error) {
+        console.error('Load records error:', error);
+        records = [];
+      }
+    }
+
+    // Status Modal
+    function showStatus() {
+      document.getElementById('statusModal').classList.add('active');
+      renderStatus();
+    }
+
+    function closeStatus() {
+      document.getElementById('statusModal').classList.remove('active');
+    }
+
+    function renderStatus() {
+      const container = document.getElementById('statusContent');
+      if (records.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-400 text-sm py-4">ยังไม่มีขอมูล</div>';
+        return;
+      }
+
+      const r = records[0].data;
+      const timestamp = new Date(r.timestamp).toLocaleString('th-TH');
+
+      container.innerHTML = `
+        <div class="text-xs text-gray-500 text-center mb-3">ขอมูลล่าสุด: ${timestamp}</div>
+        <div class="space-y-3">
+          <div class="bg-gray-50 rounded-lg p-3">
+            <div class="text-xs text-gray-500 mb-1">Material Code</div>
+            <div class="text-lg font-bold text-gray-900">${r.material_description || '-'}</div>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3">
+            <div class="text-xs text-gray-500 mb-1">Batch No.</div>
+            <div class="text-lg font-bold text-gray-900">${r.batch_no || '-'}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // History
+    async function showHistory() {
+      document.getElementById('historyModal').classList.add('active');
+      await loadRecords();
+      renderHistory();
+    }
+
+    function closeHistory() {
+      document.getElementById('historyModal').classList.remove('active');
+    }
+
+    function renderHistory() {
+      const historyContent = document.getElementById('historyContent');
+      
+      if (records.length === 0) {
+        historyContent.innerHTML = '<div class="text-center text-gray-500 py-8">ไม่มีขอมูล</div>';
+        return;
+      }
+
+      let html = '<div class="overflow-x-auto"><table class="w-full text-sm">';
+      html += '<thead class="bg-gray-50 border-b border-gray-200">';
+      html += '<tr>';
+      html += '<th class="px-3 py-2 text-left font-semibold text-gray-700">เวลา</th>';
+      html += '<th class="px-3 py-2 text-left font-semibold text-gray-700">ทิศทาง</th>';
+      html += '<th class="px-3 py-2 text-left font-semibold text-gray-700">Material Code</th>';
+      html += '<th class="px-3 py-2 text-left font-semibold text-gray-700">Batch No.</th>';
+      html += '<th class="px-3 py-2 text-center font-semibold text-gray-700">Sampling Size</th>';
+      if (records.some(r => r.data.direction === 'out')) {
+        html += '<th class="px-3 py-2 text-center font-semibold text-gray-700">Sample Usage (ชิ้น)</th>';
+      }
+      html += '<th class="px-3 py-2 text-left font-semibold text-gray-700">ผู้ตรวจสอบ</th>';
+      html += '<th class="px-3 py-2 text-left font-semibold text-gray-700">หมายเหตุ</th>';
+      html += '<th class="px-3 py-2 text-center font-semibold text-gray-700 w-12">ลบ</th>';
+      html += '</tr></thead><tbody>';
+
+      records.forEach((record, index) => {
+        const data = record.data;
+        const timestamp = new Date(data.timestamp).toLocaleString('th-TH');
+        const directionBadge = data.direction === 'in' 
+          ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">เขา (IN)</span>'
+          : '<span class="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">ออก (OUT)</span>';
+        
+        html += `<tr class="border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">`;
+        html += `<td class="px-3 py-2 text-gray-600 whitespace-nowrap">${timestamp}</td>`;
+        html += `<td class="px-3 py-2">${directionBadge}</td>`;
+        html += `<td class="px-3 py-2 font-medium text-gray-900">${data.material_description}</td>`;
+        html += `<td class="px-3 py-2 text-gray-600">${data.batch_no || '-'}</td>`;
+        html += `<td class="px-3 py-2 text-center">${data.sampling_size}</td>`;
+        if (records.some(r => r.data.direction === 'out')) {
+          html += `<td class="px-3 py-2 text-center">${data.sample_usage || '-'}</td>`;
+        }
+        html += `<td class="px-3 py-2 text-gray-600">${data.inspect_by}</td>`;
+        html += `<td class="px-3 py-2 text-gray-600">${data.remarks || '-'}</td>`;
+        html += `<td class="px-3 py-2 text-center"><button onclick="deleteRecord('${record.doc_id}')" class="text-red-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50" title="ลบ"><span class="material-symbols-rounded text-sm">delete</span></button></td>`;
+        html += '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+      historyContent.innerHTML = html;
+    }
+
+    // Delete single record
+    async function deleteRecord(docId) {
+      if (!confirm('คุณยืนยันการลบขอมูลข้อนี?')) return;
+      try {
+        records = records.filter(r => r.doc_id !== docId);
+        saveToStorage(records);
+        renderHistory();
+      } catch (error) {
+        console.error('Delete error:', error);
+        alert('เกิดข้อผิดพลาดในการลบขอมูล');
+      }
+    }
+
+    // Delete all records
+    async function deleteAllRecords() {
+      if (!confirm('คุณยืนยันการลบขอมูลทั้งหมด? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
+      try {
+        records = [];
+        saveToStorage(records);
+        renderHistory();
+        alert('ลบขอมูลทั้งหมดเรียบรอยแล้ว');
+      } catch (error) {
+        console.error('Delete all error:', error);
+        alert('เกิดข้อผิดพลาดในการลบขอมูล');
+      }
+    }
+
+    // Export to Excel
+    async function exportToExcel() {
+      if (typeof XLSX === 'undefined') {
+        showError('Component Excel ไม่พร้อมใช้งาน กรุณารีโหลดหน้า');
+        return;
+      }
+
+      try {
+        await loadRecords();
+        
+        if (records.length === 0) {
+          showError('ไม่มีขอมูลใหสงออก');
+          return;
+        }
+
+        const headers = ['เวลา', 'ทิศทาง', 'Material Code', 'Batch No.', 'Sampling Size', 'Sample Usage (ชิ้น)', 'ผู้ตรวจสอบ', 'หมายเหตุ'];
+        const data = [headers];
+
+        records.forEach(record => {
+          const d = record.data;
+          const row = [
+            new Date(d.timestamp).toLocaleString('th-TH'),
+            d.direction === 'in' ? 'เขา (IN)' : 'ออก (OUT)',
+            d.material_description,
+            d.batch_no || '',
+            d.sampling_size,
+            d.sample_usage || '',
+            d.inspect_by,
+            d.remarks || ''
+          ];
+          data.push(row);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        
+        // Set column widths
+        ws['!cols'] = [
+          { wch: 20 }, // Time
+          { wch: 12 }, // Direction
+          { wch: 30 }, // Material
+          { wch: 15 }, // Batch
+          { wch: 15 }, // Sampling Size
+          { wch: 15 }, // Sample Usage
+          { wch: 20 }, // Inspector
+          { wch: 30 }  // Remarks
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Clearance Records');
+        
+        const fileName = `Sampling_Clearance_B14_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        
+        showSuccess('สงออก Excel เรียบร้อยแล้ว');
+      } catch (error) {
+        console.error('Export error:', error);
+        showError('เกิดข้อผิดพลาดในการสงออก Excel');
+      }
+    }
+
+    // Utility Functions
+    function clearForm() {
+      document.getElementById('materialDesc').value = '';
+      document.getElementById('batchNo').value = '';
+      document.getElementById('samplingSize').value = '';
+      document.getElementById('sampleUsage').value = '';
+      document.getElementById('inspectBy').value = '';
+      document.getElementById('remarks').value = '';
+    }
+
+    function showError(message) {
+      hideMessages();
+      const errorEl = document.getElementById('error-message');
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+
+    function toggleDropdown() {
+      const menu = document.getElementById('dropdownMenu');
+      menu.classList.toggle('hidden');
+    }
+
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('dropdownMenu');
+      const dropdown = e.target.closest('.relative');
+      if (!dropdown || !dropdown.contains(menu)) {
+        menu.classList.add('hidden');
+      }
+    });
+
+    function showSuccess(message) {
+      hideMessages();
+      const successEl = document.getElementById('success-message');
+      successEl.textContent = message;
+      successEl.classList.remove('hidden');
+      setTimeout(() => {
+        successEl.classList.add('hidden');
+      }, 3000);
+    }
+
+    function hideMessages() {
+      document.getElementById('error-message').classList.add('hidden');
+      document.getElementById('success-message').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
