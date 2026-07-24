@@ -609,7 +609,7 @@
   <!-- Loading Overlay -->
   <div id="loadingOverlay">
     <div class="spinner mb-4"></div>
-    <p class="text-blue-900 font-medium">กำลังส่งข้อมูลไปยัง Google Sheets...</p>
+    <p class="text-blue-900 font-medium">กำลังบันทึกข้อมูล...</p>
   </div>
 
   <!-- Header -->
@@ -818,7 +818,7 @@
   </div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyncZRk0MZNnOnu8GeJ8vCyJaVLdNoK_sbEKcWs5_mSW-kb-170X8--4AY8lEDJeTfm/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSJrLySFGiSa0NqJLzzyFDvqRBI-tGbJDUBWJ8iZ6DZRsP1Q2L0mD5vz5Xs34swKAb/exec';
 
     // State
     let currentDirection = 'in';
@@ -1026,7 +1026,7 @@
         return;
       }
 
-      // Prepare Data for Google Sheets (Matching User's Header Names Exactly)
+      // Prepare Data (Matching User's Header Names Exactly)
       const payload = {
         "Material Code": materialDesc,
         "Batch No.": batchNo,
@@ -1053,7 +1053,7 @@
         });
 
         // With no-cors, we can't see the response body, but we assume success if no error is thrown
-        showSuccess('บันทึกข้อมูลไปยัง Google Sheets สำเร็จแล้ว');
+        showSuccess('บันทึกข้อมูลสำเร็จแล้ว');
         
         // Save to Local History (CanvasDB if in canvas, else localStorage for GitHub)
         const localRecord = {
@@ -1111,7 +1111,7 @@
       }
     }
 
-    // Status Modal (ดึงจาก Google Sheets โดยตรง)
+    // Status Modal (ดึงข้อมูลล่าสุด)
     async function showStatus() {
       document.getElementById('statusModal').classList.add('active');
       const container = document.getElementById('statusContent');
