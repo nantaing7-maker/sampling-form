@@ -818,6 +818,8 @@
   </div>
 
   <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyncZRk0MZNnOnu8GeJ8vCyJaVLdNoK_sbEKcWs5_mSW-kb-170X8--4AY8lEDJeTfm/exec';
+
     // State
     let currentDirection = 'in';
     let records = [];
@@ -1025,8 +1027,6 @@
       }
 
       // Prepare Data for Google Sheets (Matching User's Header Names Exactly)
-      const scriptURL = 'https://script.google.com/macros/s/AKfycbydbg6QbathFVXX5b-Jp7V-ByhqgSnkP-5q2U7F5s8nqzMzDZAs36dcz-ESSr3ETN-N/exec';
-      
       const payload = {
         "Material Code": materialDesc,
         "Batch No.": batchNo,
@@ -1042,9 +1042,7 @@
 
       try {
         // Send to Google Sheets via fetch
-        // Note: Google Apps Script usually requires 'no-cors' if it's a simple script, 
-        // or a standard POST if CORS is enabled.
-        const response = await fetch(scriptURL, {
+        const response = await fetch(SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors', // Common for GAS
           cache: 'no-cache',
@@ -1125,13 +1123,12 @@
       `;
       
       try {
-        // ใช้คำสั่ง GET เพื่อดึงข้อมูลล่าสุดจาก Script
         const response = await fetch(SCRIPT_URL);
         const result = await response.json();
         
         if (result.status === "success") {
           const r = result.data;
-          const timestamp = new Date(r.timestamp).toLocaleString('th-TH');
+          const timestamp = r.timestamp ? new Date(r.timestamp).toLocaleString('th-TH') : '-';
           
           container.innerHTML = `
             <div class="text-xs text-gray-500 text-center mb-3">อัปเดตล่าสุดเมื่อ: ${timestamp}</div>
@@ -1143,9 +1140,6 @@
               <div class="bg-blue-50 rounded-lg p-4 border border-blue-100 shadow-sm">
                 <div class="text-xs text-blue-600 font-semibold mb-1 uppercase tracking-wider">Batch No.</div>
                 <div class="text-xl font-bold text-blue-900 break-words">${r.batchNo || '-'}</div>
-              </div>
-              <div class="text-center">
-                <span class="text-[10px] text-gray-400">ข้อมูลนี้แสดงเหมือนกันทุกเครื่อง</span>
               </div>
             </div>
           `;
